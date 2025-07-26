@@ -104,38 +104,20 @@ async def is_user_subscribed(user_id):
             return False
     return True
 
-#start
+# === /start ===
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
+    await add_user(message.from_user.id)
+
     args = message.get_args()
-    if args:
-        code = args.strip()
-
-        # Avval reklama postidan qidiramiz
-        found = await send_reklama_post(message.from_user.id, code)
-        if not found:
-            # Agar reklama topilmasa, anime bazasidan qidiramiz
-            anime = await get_anime_by_code(code)
-            if not anime:
-                await message.answer("❌ Bunday kodga ega anime topilmadi.")
-                return
-
-            try:
-                download_btn = InlineKeyboardMarkup().add(
-                    InlineKeyboardButton("📥 Yuklab olish", url=f"https://t.me/{BOT_USERNAME}?start={code}")
-                )
-                await bot.copy_message(
-                    chat_id=message.chat.id,
-                    from_chat_id=MAIN_CHANNEL,
-                    message_id=anime['channel_post_id'],
-                    reply_markup=download_btn
-                )
-            except Exception as e:
-                await message.answer(f"❗ Xatolik yuz berdi: {e}")
-    else:
-        # Oddiy /start buyrug'i yuborilganda ishlaydi
-        await message.answer("👋 Assalomu alaykum! Kod yuboring yoki tegishli tugmalarni tanlang.")
-
+    if args and args.isdigit():
+        code = args
+        if not await is_user_subscribed(message.from_user.id):
+            markup = await make_subscribe_markup(code)
+            await message.answer("❗ Kino olishdan oldin quyidagi kanal(lar)ga obuna bo‘ling:", reply_markup=markup)
+        else:
+            await send_reklama_post(message.from_user.id, code)
+        return
 
     if message.from_user.id in ADMINS:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
