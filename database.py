@@ -1,6 +1,7 @@
 import asyncpg
 import os
 from dotenv import load_dotenv
+from loader import db
 
 load_dotenv()
 
