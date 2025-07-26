@@ -4,6 +4,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils import executor
+from search import dp as search_dp  # yoki oddiy `import search` ham bo'ladi
 from dotenv import load_dotenv
 from keep_alive import keep_alive
 from database import (
@@ -12,6 +13,7 @@ from database import (
     get_all_user_ids, update_anime_code
 )
 import os
+import search
 
 # === YUKLAMALAR ===
 load_dotenv()
@@ -54,6 +56,9 @@ class EditCode(StatesGroup):
 class UserStates(StatesGroup):
     waiting_for_admin_message = State()
 
+class SearchStates(StatesGroup):
+    waiting_for_anime_name = State()
+
 # === OBUNA TEKSHIRISH ===
 async def is_user_subscribed(user_id):
     for channel in CHANNELS:
@@ -83,6 +88,7 @@ async def start_handler(message: types.Message):
 
     if message.from_user.id in ADMINS:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add("🔍 Anime qidirish"))
         kb.add("➕ Anime qo‘shish")
         kb.add("📊 Statistika", "📈 Kod statistikasi")
         kb.add("❌ Kodni o‘chirish", "📄 Kodlar ro‘yxati")
@@ -90,8 +96,11 @@ async def start_handler(message: types.Message):
         await message.answer("👮‍♂️ Admin panel:", reply_markup=kb)
     else:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(KeyboardButton("🔍 Anime qidirish"))
         kb.add(KeyboardButton("✉️ Admin bilan bog‘lanish"))
         await message.answer("🎬 Botga xush kelibsiz!\nKod kiriting:", reply_markup=kb)
+
+from search import *
 
 # === ✉️ Admin bilan bog‘lanish ===
 @dp.message_handler(lambda m: m.text == "✉️ Admin bilan bog‘lanish")
@@ -337,6 +346,31 @@ async def kodlar(message: types.Message):
     await message.answer(text, parse_mode="Markdown")
 
 
+@dp.message_handler(lambda m: m.text == "🔍 Anime qidirish")
+async def search_start(message: types.Message):
+    await SearchStates.waiting_for_anime_name.set()
+    await message.answer("🔎 Qidirayotgan anime nomini yuboring.\n\n❌ Bekor qilish uchun '❌ Bekor qilish' deb yozing.")
+
+@dp.message_handler(state=SearchStates.waiting_for_anime_name)
+async def perform_search(message: types.Message, state: FSMContext):
+    if message.text.lower() in ["❌", "❌ bekor qilish"]:
+        await state.finish()
+        await message.answer("❌ Qidiruv bekor qilindi.")
+        return
+
+    query = message.text.strip().lower()
+    results = await search.anime_search(query)  # search.py faylidan funksiya
+
+    if not results:
+        await message.answer("❗ Hech narsa topilmadi.")
+    else:
+        msg = "🔍 Qidiruv natijalari:\n\n"
+        for r in results:
+            msg += f"🎬 <b>{r['title']}</b>\n🔗 <code>{r['code']}</code>\n\n"
+        await message.answer(msg, parse_mode="HTML")
+
+    await state.finish()
+    
 # === Statistika
 @dp.message_handler(lambda m: m.text == "📊 Statistika")
 async def stats(message: types.Message):
