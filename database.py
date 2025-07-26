@@ -24,16 +24,23 @@ async def init_db():
             );
         """)
 
-        # Kodlar jadvali (title qo‘shildi)
+        # Kodlar jadvali (ilksiz title ustuni bilan)
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS kino_codes (
                 code TEXT PRIMARY KEY,
                 channel TEXT,
                 message_id INTEGER,
-                post_count INTEGER,
-                title TEXT
+                post_count INTEGER
             );
         """)
+
+        # title ustunini mavjudligini tekshirish va yo‘q bo‘lsa qo‘shish
+        result = await conn.fetchval("""
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name='kino_codes' AND column_name='title'
+        """)
+        if not result:
+            await conn.execute("ALTER TABLE kino_codes ADD COLUMN title TEXT;")
 
         # Statistika jadvali
         await conn.execute("""
@@ -43,6 +50,7 @@ async def init_db():
                 viewed INTEGER DEFAULT 0
             );
         """)
+
 
 # === Foydalanuvchi qo‘shish ===
 async def add_user(user_id):
