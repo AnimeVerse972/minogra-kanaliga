@@ -146,3 +146,19 @@ async def save_anime_post(code, title, message_ids, channel_post_id):
                 message_ids = EXCLUDED.message_ids,
                 channel_post_id = EXCLUDED.channel_post_id;
         """, code, title, message_ids, channel_post_id)
+
+# === Kod orqali anime postni olish ===
+async def get_anime_by_code(code):
+    async with db_pool.acquire() as conn:
+        row = await conn.fetchrow("""
+            SELECT code, title, message_ids, channel_post_id FROM anime_posts WHERE code = $1
+        """, code)
+        if row:
+            return {
+                "code": row["code"],
+                "title": row["title"],
+                "message_ids": row["message_ids"],
+                "channel_post_id": row["channel_post_id"]
+            }
+        return None
+
