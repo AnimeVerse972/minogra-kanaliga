@@ -6,10 +6,8 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 from aiogram.utils import executor
 from dotenv import load_dotenv
 from keep_alive import keep_alive
-from database import init_db, add_user, get_user_count, add_kino_code, get_kino_by_code, get_all_codes, delete_kino_code, get_code_stat, increment_stat, get_all_user_ids, save_anime_post
+from database import init_db, add_user, get_user_count, add_kino_code, get_kino_by_code, get_all_codes, delete_kino_code, get_code_stat, increment_stat, get_all_user_ids
 import os
-import asyncpg
-import asyncio
 
 # === YUKLAMALAR ===
 load_dotenv()
@@ -19,79 +17,31 @@ API_TOKEN = os.getenv("API_TOKEN")
 CHANNELS = os.getenv("CHANNEL_USERNAMES").split(",")
 MAIN_CHANNEL = os.getenv("MAIN_CHANNEL")
 BOT_USERNAME = os.getenv("BOT_USERNAME")
-DB_URL = os.getenv("DATABASE_URL")
 
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
+async def make_subscribe_markup(code):
+    keyboard = InlineKeyboardMarkup(row_width=1)
+    for channel in CHANNELS:
+        try:
+            invite_link = await bot.create_chat_invite_link(channel.strip())
+            keyboard.add(InlineKeyboardButton("📢 Obuna bo‘lish", url=invite_link.invite_link))
+        except Exception as e:
+            print(f"❌ Link yaratishda xatolik: {channel} -> {e}")
+    keyboard.add(InlineKeyboardButton("✅ Tekshirish", callback_data=f"check_sub:{code}"))
+    return keyboard
+
 ADMINS = [6486825926,8017776953]
 
+# === HOLATLAR ===
 class AdminStates(StatesGroup):
     waiting_for_kino_data = State()
     waiting_for_delete_code = State()
     waiting_for_stat_code = State()
     waiting_for_broadcast_data = State()
 
-class AddAnimeFSM(StatesGroup):
-    title = State()
-    code = State()
-    collect_videos = State()
-
-anime_temp = {}
-
-@dp.message_handler(lambda m: m.text == "➕ Anime qo‘shish")
-async def start_add_anime(message: types.Message):
-    if message.from_user.id not in ADMINS:
-        return
-    await message.answer("📌 Anime nomini yuboring:")
-    await AddAnimeFSM.title.set()
-
-@dp.message_handler(state=AddAnimeFSM.title)
-async def get_anime_title(message: types.Message, state: FSMContext):
-    anime_temp[message.from_user.id] = {
-        'title': message.text,
-        'messages': []
-    }
-    await message.answer("🔢 Endi anime uchun kod kiriting:")
-    await AddAnimeFSM.code.set()
-
-@dp.message_handler(state=AddAnimeFSM.code)
-async def get_anime_code(message: types.Message, state: FSMContext):
-    anime_temp[message.from_user.id]['code'] = message.text.strip()
-    await message.answer("🎥 Endi video(lar)ni yuboring. Tugatgach /yubor buyrug‘ini yuboring.")
-    await AddAnimeFSM.collect_videos.set()
-
-@dp.message_handler(commands=['yubor'], state=AddAnimeFSM.collect_videos)
-async def finish_anime_upload(message: types.Message, state: FSMContext):
-    data = anime_temp.get(message.from_user.id)
-    if not data or not data['messages']:
-        await message.answer("❗ Hech qanday video yuborilmadi.")
-        return
-
-    download_btn = InlineKeyboardMarkup().add(
-        InlineKeyboardButton("📥 Yuklab olish", url=f"https://t.me/{BOT_USERNAME}?start={data['code']}")
-    )
-
-    msg = data['messages'][0]
-    channel_msg = await bot.copy_message(
-        chat_id=MAIN_CHANNEL,
-        from_chat_id=msg.chat.id,
-        message_id=msg.message_id,
-        reply_markup=download_btn
-    )
-
-    message_ids = [m.message_id for m in data['messages']]
-    await save_anime_post(data['code'], data['title'], message_ids, channel_msg.message_id)
-
-    await message.answer("✅ Anime muvaffaqiyatli qo‘shildi!")
-    await state.finish()
-
-@dp.message_handler(content_types=types.ContentType.ANY, state=AddAnimeFSM.collect_videos)
-async def collect_videos(message: types.Message):
-    if message.from_user.id in anime_temp:
-        anime_temp[message.from_user.id]['messages'].append(message)
-        
 # === OBUNA TEKSHIRISH ===
 async def is_user_subscribed(user_id):
     for channel in CHANNELS:
@@ -103,41 +53,21 @@ async def is_user_subscribed(user_id):
             print(f"❗ Obuna tekshirishda xatolik: {channel} -> {e}")
             return False
     return True
-#start funksiyasiga kod
+
+# === /start ===
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
-    args = message.get_args()
+    await add_user(message.from_user.id)
 
-    # ✅ Kod kiritilgan bo‘lsa va u faqat raqamlardan iborat bo‘lsa
+    args = message.get_args()
     if args and args.isdigit():
         code = args
         if not await is_user_subscribed(message.from_user.id):
             markup = await make_subscribe_markup(code)
             await message.answer("❗ Kino olishdan oldin quyidagi kanal(lar)ga obuna bo‘ling:", reply_markup=markup)
         else:
-            found = await send_reklama_post(message.from_user.id, code)
-            if not found:
-                anime = await get_anime_by_code(code)
-                if not anime:
-                    await message.answer("❌ Bunday kodga ega anime topilmadi.")
-                    return
-
-                try:
-                    download_btn = InlineKeyboardMarkup().add(
-                        InlineKeyboardButton("📥 Yuklab olish", url=f"https://t.me/{BOT_USERNAME}?start={code}")
-                    )
-                    await bot.copy_message(
-                        chat_id=message.chat.id,
-                        from_chat_id=MAIN_CHANNEL,
-                        message_id=anime['channel_post_id'],
-                        reply_markup=download_btn
-                    )
-                except Exception as e:
-                    await message.answer(f"❗ Xatolik yuz berdi: {e}")
+            await send_reklama_post(message.from_user.id, code)
         return
-
-    # 🎬 Oddiy /start buyrug‘i
-    await message.answer("👋 Assalomu alaykum! Kod yuboring yoki tegishli tugmalarni tanlang.")
 
     if message.from_user.id in ADMINS:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -146,6 +76,8 @@ async def start_handler(message: types.Message):
         kb.add("📢 Habar yuborish", "❌ Kodni o‘chirish")
         kb.add("❌ Bekor qilish")
         await message.answer("👮‍♂️ Admin panel:", reply_markup=kb)
+    else:
+        await message.answer("🎬 Botga xush kelibsiz!\nKod kiriting:")
 
 # === Kod statistikasi
 @dp.message_handler(lambda m: m.text == "📈 Kod statistikasi")
@@ -400,17 +332,6 @@ async def cancel(message: types.Message, state: FSMContext):
 # === START ===
 async def on_startup(dp):
     await init_db()
-    conn = await asyncpg.connect(DB_URL)
-    await conn.execute('''
-        CREATE TABLE IF NOT EXISTS anime_posts (
-            id SERIAL PRIMARY KEY,
-            code TEXT UNIQUE NOT NULL,
-            title TEXT NOT NULL,
-            message_ids INTEGER[] NOT NULL,
-            channel_post_id INTEGER NOT NULL
-        );
-    ''')
-    await conn.close()
     print("✅ PostgreSQL bazaga ulandi!")
 
 if __name__ == "__main__":
