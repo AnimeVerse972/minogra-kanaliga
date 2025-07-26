@@ -1,5 +1,4 @@
 from dotenv import load_dotenv
-from database import db_pool, init_db
 import os
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
