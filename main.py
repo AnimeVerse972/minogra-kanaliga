@@ -6,8 +6,11 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 from aiogram.utils import executor
 from dotenv import load_dotenv
 from keep_alive import keep_alive
-from database import update_anime_code
-from database import init_db, add_user, get_user_count, add_kino_code, get_kino_by_code, get_all_codes, delete_kino_code, get_code_stat, increment_stat, get_all_user_ids
+from database import (
+    init_db, add_user, get_user_count, add_kino_code, get_kino_by_code,
+    get_all_codes, delete_kino_code, get_code_stat, increment_stat,
+    get_all_user_ids, update_anime_code
+)
 import os
 
 # === YUKLAMALAR ===
