@@ -43,6 +43,17 @@ async def init_db():
             );
         """)
 
+        # Anime postlari jadvali
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS anime_posts (
+                id SERIAL PRIMARY KEY,
+                code TEXT UNIQUE NOT NULL,
+                title TEXT NOT NULL,
+                message_ids INTEGER[] NOT NULL,
+                channel_post_id INTEGER NOT NULL
+            );
+        """)
+
 # === Foydalanuvchi qo‘shish ===
 async def add_user(user_id):
     async with db_pool.acquire() as conn:
@@ -123,3 +134,15 @@ async def get_all_user_ids():
     async with db_pool.acquire() as conn:
         rows = await conn.fetch("SELECT user_id FROM users")
         return [row["user_id"] for row in rows]
+
+# === Anime postlarini saqlash ===
+async def save_anime_post(code, title, message_ids, channel_post_id):
+    async with db_pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO anime_posts (code, title, message_ids, channel_post_id)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (code) DO UPDATE SET
+                title = EXCLUDED.title,
+                message_ids = EXCLUDED.message_ids,
+                channel_post_id = EXCLUDED.channel_post_id;
+        """, code, title, message_ids, channel_post_id)
