@@ -131,3 +131,11 @@ async def get_all_user_ids():
     async with db_pool.acquire() as conn:
         rows = await conn.fetch("SELECT user_id FROM users")
         return [row["user_id"] for row in rows]
+
+async def add_kino_code(code, title, channel, reklama_id, post_count):
+    conn = await asyncpg.connect(DB_URL)
+    await conn.execute(
+        "INSERT INTO kino_posts (code, title, channel, reklama_id, post_count) VALUES ($1, $2, $3, $4, $5)",
+        code, title, channel, reklama_id, post_count
+    )
+    await conn.close()
