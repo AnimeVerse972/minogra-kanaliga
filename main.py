@@ -33,7 +33,7 @@ async def make_subscribe_markup(code):
     keyboard.add(InlineKeyboardButton("✅ Tekshirish", callback_data=f"check_sub:{code}"))
     return keyboard
 
-ADMINS = [6486825926,8017776953]
+ADMINS = [6486825926,7483732504,5959511392]
 
 # === HOLATLAR ===
 class AdminStates(StatesGroup):
