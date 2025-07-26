@@ -86,9 +86,12 @@ async def add_kino_code(code, channel, message_id, post_count, title):
 async def get_kino_by_code(code):
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            SELECT channel, message_id, post_count, title FROM kino_codes WHERE code = $1
+            SELECT code, channel, message_id, post_count, title
+            FROM kino_codes
+            WHERE code = $1
         """, code)
         return dict(row) if row else None
+
 
 # === Barcha kodlarni olish ===
 async def get_all_codes():
