@@ -79,10 +79,10 @@ async def start_handler(message: types.Message):
 
     if message.from_user.id in ADMINS:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add("➕ Anime qo‘shish", "📄 Kodlar ro‘yxati")
+        kb.add("➕ Anime qo‘shish")
         kb.add("📊 Statistika", "📈 Kod statistikasi")
-        kb.add("📢 Habar yuborish", "❌ Kodni o‘chirish")
-        kb.add("❌ Bekor qilish")
+        kb.add("❌ Kodni o‘chirish", "📄 Kodlar ro‘yxati")
+        kb.add("❌ Bekor qilish", "✏️ Kodni tahrirlash")
         await message.answer("👮‍♂️ Admin panel:", reply_markup=kb)
     else:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
