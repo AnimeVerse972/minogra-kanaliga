@@ -167,9 +167,18 @@ async def get_new_code(message: types.Message, state: FSMContext):
 @dp.message_handler(state=EditCode.WaitingForNewTitle, user_id=ADMINS)
 async def get_new_title(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    await update_anime_code(data['old_code'], data['new_code'], message.text.strip())
-    await message.answer("✅ Kod va nom muvaffaqiyatli tahrirlandi.")
-    await state.finish()
+    try:
+        await update_anime_code(
+            data['old_code'],
+            data['new_code'],
+            message.text.strip()
+        )
+        await message.answer("✅ Kod va nom muvaffaqiyatli tahrirlandi.")
+    except Exception as e:
+        await message.answer(f"❌ Xatolik yuz berdi:\n{e}")
+    finally:
+        await state.finish()
+        
 # === Oddiy raqam yuborilganda
 @dp.message_handler(lambda message: message.text.isdigit())
 async def handle_code_message(message: types.Message):
