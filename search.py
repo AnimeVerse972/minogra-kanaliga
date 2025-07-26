@@ -7,26 +7,17 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from loader import dp
 from database import search_kino_by_title, increment_stat
 
-
-# 🔵 FSM Holatlari
 class SearchStates(StatesGroup):
     waiting_for_query = State()
 
-
-# 🔍 Tugma bosilganda holatga o'tkazish
 @dp.message_handler(Text(equals="🔍 Anime qidirish"))
 async def ask_search_query(message: types.Message, state: FSMContext):
     await message.answer("🔎 Qaysi anime kerak? Nomini yozing:")
     await SearchStates.waiting_for_query.set()
-    print("[FSM] Holat: waiting_for_query")
 
-
-# 🔍 Foydalanuvchi matn kiritsa
 @dp.message_handler(state=SearchStates.waiting_for_query)
 async def handle_search_query(message: types.Message, state: FSMContext):
     query = message.text.strip()
-    print(f"[Qidiruv] Foydalanuvchi kiritdi: {query}")
-
     results = await search_kino_by_title(query)
 
     if not results:
