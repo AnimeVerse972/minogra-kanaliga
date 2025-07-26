@@ -342,14 +342,13 @@ async def delete_code_handler(message: types.Message, state: FSMContext):
 # === Bekor qilish
 @dp.message_handler(lambda m: m.text == "❌ Bekor qilish", state="*")
 async def cancel(message: types.Message, state: FSMContext):
-    await state.finish()
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add("➕ Anime qo‘shish", "📄 Kodlar ro‘yxati")
     kb.add("📊 Statistika", "📈 Kod statistikasi")
     kb.add("📢 Habar yuborish", "❌ Kodni o‘chirish")
     kb.add("❌ Bekor qilish", "✏️ Kodni tahrirlash")
     await message.answer("❌ Bekor qilindi", reply_markup=kb)
-
+    await state.finish()
 # === START ===
 async def on_startup(dp):
     await init_db()
