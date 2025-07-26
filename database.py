@@ -135,3 +135,16 @@ async def get_all_user_ids():
     async with db_pool.acquire() as conn:
         rows = await conn.fetch("SELECT user_id FROM users")
         return [row["user_id"] for row in rows]
+
+# === Title bo‘yicha qidirish ===
+async def search_kino_by_title(query):
+    async with db_pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT code, channel, message_id, post_count, title
+            FROM kino_codes
+            WHERE title ILIKE '%' || $1 || '%'
+            ORDER BY viewed DESC NULLS LAST
+            LIMIT 10;
+        """, query)
+        return [dict(row) for row in rows]
+
