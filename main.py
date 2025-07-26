@@ -6,7 +6,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMar
 from aiogram.utils import executor
 from dotenv import load_dotenv
 from keep_alive import keep_alive
-from database import init_db, add_user, get_user_count, add_kino_code, get_kino_by_code, get_all_codes, delete_kino_code, get_code_stat, increment_stat, get_all_user_ids
+from database import init_db, add_user, get_user_count, save_anime_post, add_kino_code, get_anime_by_code, get_all_codes, delete_kino_code, get_code_stat, increment_stat, get_all_user_ids
 import os
 
 # === YUKLAMALAR ===
@@ -37,10 +37,98 @@ ADMINS = [6486825926,8017776953]
 
 # === HOLATLAR ===
 class AdminStates(StatesGroup):
-    waiting_for_kino_data = State()
     waiting_for_delete_code = State()
     waiting_for_stat_code = State()
     waiting_for_broadcast_data = State()
+
+class AddAnimeFSM(StatesGroup):
+    waiting_for_title = State()
+    waiting_for_code = State()
+    waiting_for_posts = State()
+
+@dp.message_handler(lambda msg: msg.text == "➕ Anime qo‘shish", user_id=ADMINS)
+async def start_add_anime(message: types.Message):
+    await message.answer("🎬 Iltimos, animening nomini yuboring:")
+    await AddAnimeFSM.waiting_for_title.set()
+
+@dp.message_handler(state=AddAnimeFSM.waiting_for_title)
+async def get_title(message: types.Message, state: FSMContext):
+    await state.update_data(title=message.text)
+    await message.answer("🔢 Endi animening kodini yuboring:")
+    await AddAnimeFSM.waiting_for_code.set()
+
+@dp.message_handler(state=AddAnimeFSM.waiting_for_code)
+async def get_code(message: types.Message, state: FSMContext):
+    if not message.text.isdigit():
+        return await message.answer("❗ Kod faqat raqam bo‘lishi kerak.")
+    await state.update_data(code=message.text)
+    await state.update_data(posts=[])
+    await message.answer("📤 Endi postlarni yuboring (video, fayl, matn...). Tugagach, /saqlash deb yozing.")
+    await AddAnimeFSM.waiting_for_posts.set()
+
+@dp.message_handler(state=AddAnimeFSM.waiting_for_posts, content_types=types.ContentTypes.ANY)
+async def collect_posts(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    posts = data.get("posts", [])
+    posts.append(message)
+    await state.update_data(posts=posts)
+    await message.answer(f"✅ Post qabul qilindi. Hozircha {len(posts)} ta post. Davom eting yoki /saqlash deb yozing.")
+
+@dp.message_handler(commands=["saqlash"], state=AddAnimeFSM.waiting_for_posts)
+async def finalize_anime(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    title = data["title"]
+    code = data["code"]
+    posts = data["posts"]
+
+    if not posts:
+        return await message.answer("❗ Postlar yo‘q. Avval postlarni yuboring.")
+
+    save_channel = os.getenv("SAVE_CHANNEL")
+    main_channel = os.getenv("MAIN_CHANNEL")
+    bot_username = os.getenv("BOT_USERNAME").replace("@", "")
+
+    saved_ids = []
+
+    for post in posts:
+        try:
+            msg = await bot.copy_message(save_channel, post.chat.id, post.message_id)
+            saved_ids.append(msg.message_id)
+        except Exception as e:
+            print(f"Postni saqlab bo‘lmadi: {e}")
+
+    if not saved_ids:
+        return await message.answer("❌ Hech qanday post saqlanmadi.")
+
+    # 1-postni asosiy kanalga yuborish
+    keyboard = InlineKeyboardMarkup().add(
+        InlineKeyboardButton("📥 Yuklab olish", url=f"https://t.me/{bot_username}?start={code}")
+    )
+    sent_main = await bot.copy_message(main_channel, save_channel, saved_ids[0], reply_markup=keyboard)
+
+    # SQLga saqlash
+    await save_anime_post(code, title, ",".join(map(str, saved_ids)), sent_main.message_id)
+    await message.answer("✅ Anime muvaffaqiyatli saqlandi!")
+    await state.finish()
+
+@dp.message_handler(lambda msg: msg.text.startswith("/start"))
+async def handle_start(message: types.Message):
+    args = message.get_args()
+    if not args.isdigit():
+        return await message.answer("👋 Assalomu alaykum!")
+    
+    code = args
+    data = await get_anime_by_code(code)
+    if not data:
+        return await message.answer("❌ Kod topilmadi.")
+
+    post_ids = list(map(int, data["message_ids"].split(",")))
+    for pid in post_ids:
+        try:
+            await bot.copy_message(message.chat.id, os.getenv("SAVE_CHANNEL"), pid)
+        except:
+            pass
+
 
 # === OBUNA TEKSHIRISH ===
 async def is_user_subscribed(user_id):
@@ -190,50 +278,6 @@ async def kino_button(callback: types.CallbackQuery):
     await bot.copy_message(callback.from_user.id, channel, base_id + number - 1)
     await callback.answer()
 
-# === ➕ Anime qo‘shish
-@dp.message_handler(lambda m: m.text == "➕ Anime qo‘shish")
-async def add_start(message: types.Message):
-    if message.from_user.id in ADMINS:
-        await AdminStates.waiting_for_kino_data.set()
-        await message.answer("📝 Format: `KOD @kanal REKLAMA_ID POST_SONI`\nMasalan: `91 @MyKino 4 12`", parse_mode="Markdown")
-
-@dp.message_handler(state=AdminStates.waiting_for_kino_data)
-async def add_kino_handler(message: types.Message, state: FSMContext):
-    rows = message.text.strip().split("\n")
-    successful = 0
-    failed = 0
-    for row in rows:
-        parts = row.strip().split()
-        if len(parts) != 4:
-            failed += 1
-            continue
-
-        code, server_channel, reklama_id, post_count = parts
-        if not (code.isdigit() and reklama_id.isdigit() and post_count.isdigit()):
-            failed += 1
-            continue
-
-        reklama_id = int(reklama_id)
-        post_count = int(post_count)
-        await add_kino_code(code, server_channel, reklama_id + 1, post_count)
-
-        download_btn = InlineKeyboardMarkup().add(
-            InlineKeyboardButton("📥 Yuklab olish", url=f"https://t.me/{BOT_USERNAME}?start={code}")
-        )
-
-        try:
-            await bot.copy_message(
-                 chat_id=MAIN_CHANNEL,
-                from_chat_id=server_channel,
-                message_id=reklama_id,
-                reply_markup=download_btn
-            )
-            successful += 1
-        except:
-            failed += 1
-
-    await message.answer(f"✅ Yangi kodlar qo‘shildi:\n\n✅ Muvaffaqiyatli: {successful}\n❌ Xatolik: {failed}")
-    await state.finish()
 
 # === 📢 Habar yuborish
 @dp.message_handler(lambda m: m.text == "📢 Habar yuborish")
