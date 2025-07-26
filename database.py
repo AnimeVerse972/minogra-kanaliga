@@ -24,13 +24,14 @@ async def init_db():
             );
         """)
 
-        # Kodlar jadvali
+        # Kodlar jadvali (title qo‘shildi)
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS kino_codes (
                 code TEXT PRIMARY KEY,
                 channel TEXT,
                 message_id INTEGER,
-                post_count INTEGER
+                post_count INTEGER,
+                title TEXT
             );
         """)
 
@@ -57,16 +58,17 @@ async def get_user_count():
         return row[0]
 
 # === Kod qo‘shish ===
-async def add_kino_code(code, channel, message_id, post_count):
+async def add_kino_code(code, channel, message_id, post_count, title):
     async with db_pool.acquire() as conn:
         await conn.execute("""
-            INSERT INTO kino_codes (code, channel, message_id, post_count)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO kino_codes (code, channel, message_id, post_count, title)
+            VALUES ($1, $2, $3, $4, $5)
             ON CONFLICT (code) DO UPDATE SET
                 channel = EXCLUDED.channel,
                 message_id = EXCLUDED.message_id,
-                post_count = EXCLUDED.post_count;
-        """, code, channel, message_id, post_count)
+                post_count = EXCLUDED.post_count,
+                title = EXCLUDED.title;
+        """, code, channel, message_id, post_count, title)
         await conn.execute("""
             INSERT INTO stats (code) VALUES ($1)
             ON CONFLICT DO NOTHING
@@ -76,9 +78,9 @@ async def add_kino_code(code, channel, message_id, post_count):
 async def get_kino_by_code(code):
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow("""
-            SELECT channel, message_id, post_count FROM kino_codes WHERE code = $1
+            SELECT channel, message_id, post_count, title FROM kino_codes WHERE code = $1
         """, code)
-        return row
+        return dict(row) if row else None
 
 # === Barcha kodlarni olish ===
 async def get_all_codes():
@@ -108,24 +110,17 @@ async def increment_stat(code, field):
                 UPDATE stats SET {field} = {field} + 1 WHERE code = $1
             """, code)
 
-# === Barcha statistikani olish (faqat adminlar uchun) ===
-async def get_all_stats():
-    async with db_pool.acquire() as conn:
-        return await conn.fetch("SELECT * FROM stats")
-
 # === Kod statistikasi olish (faqat adminlar uchun) ===
 async def get_code_stat(code):
     async with db_pool.acquire() as conn:
         return await conn.fetchrow("SELECT searched, viewed FROM stats WHERE code = $1", code)
 
+# === Kod va nomni yangilash ===
 async def update_anime_code(old_code, new_code, new_title):
-    conn = await asyncpg.connect(DB_URL)
-    await conn.execute(
-        "UPDATE anime_posts SET code=$1, title=$2 WHERE code=$3",
-        new_code, new_title, old_code
-    )
-    await conn.close()
-
+    async with db_pool.acquire() as conn:
+        await conn.execute("""
+            UPDATE kino_codes SET code = $1, title = $2 WHERE code = $3
+        """, new_code, new_title, old_code)
 
 # === Barcha foydalanuvchi IDlarini olish ===
 async def get_all_user_ids():
