@@ -42,6 +42,11 @@ class AdminStates(StatesGroup):
     waiting_for_stat_code = State()
     waiting_for_broadcast_data = State()
 
+class EditCode(StatesGroup):
+    WaitingForOldCode = State()
+    WaitingForNewCode = State()
+    WaitingForNewTitle = State()
+    
 class UserStates(StatesGroup):
     waiting_for_admin_message = State()
 
@@ -134,6 +139,37 @@ async def show_code_stat(message: types.Message, state: FSMContext):
         parse_mode="HTML"
     )
 
+@dp.message_handler(lambda message: message.text == "✏️ Kodni tahrirlash", user_id=ADMINS)
+async def edit_code_start(message: types.Message):
+    await message.answer("Qaysi kodni tahrirlashni xohlaysiz? (eski kodni yuboring)")
+    await EditCode.WaitingForOldCode.set()
+
+# --- Eski kodni qabul qilish ---
+@dp.message_handler(state=EditCode.WaitingForOldCode, user_id=ADMINS)
+async def get_old_code(message: types.Message, state: FSMContext):
+    code = message.text.strip()
+    post = await get_kino_by_code(code)
+    if not post:
+        await message.answer("❌ Bunday kod topilmadi. Qaytadan urinib ko‘ring.")
+        return
+    await state.update_data(old_code=code)
+    await message.answer(f"🔎 Kod: {code}\n📌 Nomi: {post['title']}\n\nYangi kodni yuboring:")
+    await EditCode.WaitingForNewCode.set()
+
+# --- Yangi kodni olish ---
+@dp.message_handler(state=EditCode.WaitingForNewCode, user_id=ADMINS)
+async def get_new_code(message: types.Message, state: FSMContext):
+    await state.update_data(new_code=message.text.strip())
+    await message.answer("Yangi nomini yuboring:")
+    await EditCode.WaitingForNewTitle.set()
+
+# --- Yangi nomni olish va yangilash ---
+@dp.message_handler(state=EditCode.WaitingForNewTitle, user_id=ADMINS)
+async def get_new_title(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    await update_anime_code(data['old_code'], data['new_code'], message.text.strip())
+    await message.answer("✅ Kod va nom muvaffaqiyatli tahrirlandi.")
+    await state.finish()
 # === Oddiy raqam yuborilganda
 @dp.message_handler(lambda message: message.text.isdigit())
 async def handle_code_message(message: types.Message):
@@ -311,7 +347,7 @@ async def cancel(message: types.Message, state: FSMContext):
     kb.add("➕ Anime qo‘shish", "📄 Kodlar ro‘yxati")
     kb.add("📊 Statistika", "📈 Kod statistikasi")
     kb.add("📢 Habar yuborish", "❌ Kodni o‘chirish")
-    kb.add("❌ Bekor qilish")
+    kb.add("❌ Bekor qilish", "✏️ Kodni tahrirlash")
     await message.answer("❌ Bekor qilindi", reply_markup=kb)
 
 # === START ===
