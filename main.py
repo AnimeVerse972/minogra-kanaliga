@@ -14,7 +14,6 @@ from aiogram.utils import executor
 # Ichki modullar
 from loader import bot, dp, storage  # loader.py ichida yaratilgan bot, dp, storage
 from keep_alive import keep_alive  # agar siz Render yoki Replitda ishlatsangiz
-import search  # FSM bilan qidiruv funksiyasi
 
 # Database funksiyalari
 from database import (
@@ -105,14 +104,13 @@ async def start_handler(message: types.Message):
 
     if message.from_user.id in ADMINS:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add("➕ Anime qo‘shish", "🔍 Anime qidirish")
+        kb.add("➕ Anime qo‘shish")
         kb.add("📊 Statistika", "📈 Kod statistikasi")
         kb.add("❌ Kodni o‘chirish", "📄 Kodlar ro‘yxati")
         kb.add("✏️ Kodni tahrirlash")
         await message.answer("👮‍♂️ Admin panel:", reply_markup=kb)
     else:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add(KeyboardButton("🔍 Anime qidirish"))
         kb.add(KeyboardButton("✉️ Admin bilan bog‘lanish"))
         await message.answer("🎬 Botga xush kelibsiz!\nKod kiriting:", reply_markup=kb)
 
