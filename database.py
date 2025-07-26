@@ -118,6 +118,15 @@ async def get_code_stat(code):
     async with db_pool.acquire() as conn:
         return await conn.fetchrow("SELECT searched, viewed FROM stats WHERE code = $1", code)
 
+async def update_anime_code(old_code, new_code, new_title):
+    conn = await asyncpg.connect(DB_URL)
+    await conn.execute(
+        "UPDATE anime_posts SET code=$1, title=$2 WHERE code=$3",
+        new_code, new_title, old_code
+    )
+    await conn.close()
+
+
 # === Barcha foydalanuvchi IDlarini olish ===
 async def get_all_user_ids():
     async with db_pool.acquire() as conn:
