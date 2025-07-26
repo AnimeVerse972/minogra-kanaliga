@@ -1,19 +1,36 @@
+import os
+from dotenv import load_dotenv
+
 from aiogram import Bot, Dispatcher, types
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils import executor
-from dotenv import load_dotenv
-from keep_alive import keep_alive
-from loader import dp, bot, storage 
-from database import (
-    init_db, add_user, get_user_count, add_kino_code, get_kino_by_code,
-    get_all_codes, delete_kino_code, get_code_stat, increment_stat,
-    get_all_user_ids, update_anime_code
+from aiogram.types import (
+    ReplyKeyboardMarkup, KeyboardButton,
+    InlineKeyboardMarkup, InlineKeyboardButton
 )
-import os
-import search
+from aiogram.utils import executor
+
+# Ichki modullar
+from loader import bot, dp, storage  # loader.py ichida yaratilgan bot, dp, storage
+from keep_alive import keep_alive  # agar siz Render yoki Replitda ishlatsangiz
+import search  # FSM bilan qidiruv funksiyasi
+
+# Database funksiyalari
+from database import (
+    init_db,
+    add_user,
+    get_user_count,
+    add_kino_code,
+    get_kino_by_code,
+    get_all_codes,
+    delete_kino_code,
+    get_code_stat,
+    increment_stat,
+    get_all_user_ids,
+    update_anime_code
+)
+
 
 # === YUKLAMALAR ===
 load_dotenv()
