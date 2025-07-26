@@ -88,8 +88,7 @@ async def start_handler(message: types.Message):
 
     if message.from_user.id in ADMINS:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add("🔍 Anime qidirish"))
-        kb.add("➕ Anime qo‘shish")
+        kb.add("➕ Anime qo‘shish", "🔍 Anime qidirish")
         kb.add("📊 Statistika", "📈 Kod statistikasi")
         kb.add("❌ Kodni o‘chirish", "📄 Kodlar ro‘yxati")
         kb.add("✏️ Kodni tahrirlash")
