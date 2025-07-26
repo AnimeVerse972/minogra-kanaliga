@@ -4,7 +4,7 @@ from aiogram.dispatcher.filters import Text
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
-from main import dp
+from loader import dp
 from database import search_kino_by_title, increment_stat
 
 
