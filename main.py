@@ -340,17 +340,15 @@ async def delete_code_handler(message: types.Message, state: FSMContext):
         await message.answer("❌ Kod topilmadi yoki o‘chirib bo‘lmadi.")
 
 # === Bekor qilish ===
-@dp.message_handler(lambda m: m.text == "❌ Bekor qilish", state="*")
-async def cancel(message: types.Message, state: FSMContext):
+@dp.message_handler(lambda m: m.text == "❌ Bekor qilish", state='*')
+async def cancel_handler(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        await message.answer("🚫 Hozir hech qanday amal bajarilmayapti.")
+        return
+
     await state.finish()
-    
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(KeyboardButton("➕ Anime qo‘shish"), KeyboardButton("📄 Kodlar ro‘yxati"))
-    kb.add(KeyboardButton("📊 Statistika"), KeyboardButton("📈 Kod statistikasi"))
-    kb.add(KeyboardButton("📢 Habar yuborish"), KeyboardButton("❌ Kodni o‘chirish"))
-    kb.add(KeyboardButton("✏️ Kodni tahrirlash"))  # ❌ Bekor qilish tugmasini qo‘shish shart emas bu yerda
-                                                    # u tugma o‘zi "bekor qilish" uchun ishlatilmoqda
-    await message.answer("❌ Amal bekor qilindi.", reply_markup=kb)
+    await message.answer("❌ Amal bekor qilindi.", reply_markup=admin_menu())
 
 # === START ===
 async def on_startup(dp):
