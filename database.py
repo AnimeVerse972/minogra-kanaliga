@@ -123,27 +123,3 @@ async def get_all_user_ids():
     async with db_pool.acquire() as conn:
         rows = await conn.fetch("SELECT user_id FROM users")
         return [row["user_id"] for row in rows]
-
-# === Anime postlarini saqlash ===
-async def save_anime_post(code, title, message_ids, channel_post_id):
-    async with db_pool.acquire() as conn:
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS anime_posts (
-                code TEXT PRIMARY KEY,
-                title TEXT,
-                message_ids TEXT,  -- JSON string (1,2,3...)
-                channel_post_id INTEGER
-            );
-        """)
-        await conn.execute("""
-            INSERT INTO anime_posts (code, title, message_ids, channel_post_id)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (code) DO UPDATE SET
-                title = EXCLUDED.title,
-                message_ids = EXCLUDED.message_ids,
-                channel_post_id = EXCLUDED.channel_post_id
-        """, code, title, message_ids, channel_post_id)
-
-async def get_anime_by_code(code):
-    async with db_pool.acquire() as conn:
-        return await conn.fetchrow("SELECT * FROM anime_posts WHERE code = $1", code)
