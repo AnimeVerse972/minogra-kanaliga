@@ -268,18 +268,21 @@ async def add_kino_handler(message: types.Message, state: FSMContext):
     failed = 0
     for row in rows:
         parts = row.strip().split()
-        if len(parts) != 4:
+        if len(parts) < 5:
             failed += 1
             continue
 
-        code, server_channel, reklama_id, post_count = parts
+        code, server_channel, reklama_id, post_count = parts[:4]
+        title = " ".join(parts[4:])
+
         if not (code.isdigit() and reklama_id.isdigit() and post_count.isdigit()):
             failed += 1
             continue
 
         reklama_id = int(reklama_id)
         post_count = int(post_count)
-        await add_kino_code(code, server_channel, reklama_id + 1, post_count)
+
+        await add_kino_code(code, server_channel, reklama_id + 1, post_count, title)
 
         download_btn = InlineKeyboardMarkup().add(
             InlineKeyboardButton("📥 Yuklab olish", url=f"https://t.me/{BOT_USERNAME}?start={code}")
@@ -287,7 +290,7 @@ async def add_kino_handler(message: types.Message, state: FSMContext):
 
         try:
             await bot.copy_message(
-                 chat_id=MAIN_CHANNEL,
+                chat_id=MAIN_CHANNEL,
                 from_chat_id=server_channel,
                 message_id=reklama_id,
                 reply_markup=download_btn
@@ -298,6 +301,7 @@ async def add_kino_handler(message: types.Message, state: FSMContext):
 
     await message.answer(f"✅ Yangi kodlar qo‘shildi:\n\n✅ Muvaffaqiyatli: {successful}\n❌ Xatolik: {failed}")
     await state.finish()
+
 
 # === Kodlar ro‘yxati
 @dp.message_handler(lambda m: m.text == "📄 Kodlar ro‘yxati")
