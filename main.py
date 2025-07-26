@@ -38,7 +38,6 @@ ADMINS = [6486825926,8017776953]
 # === HOLATLAR ===
 class AdminStates(StatesGroup):
     waiting_for_kino_data = State()
-    waiting_for_kino_title = State()
     waiting_for_delete_code = State()
     waiting_for_stat_code = State()
     waiting_for_broadcast_data = State()
@@ -198,55 +197,43 @@ async def add_start(message: types.Message):
         await AdminStates.waiting_for_kino_data.set()
         await message.answer("📝 Format: `KOD @kanal REKLAMA_ID POST_SONI`\nMasalan: `91 @MyKino 4 12`", parse_mode="Markdown")
 
-# 1-qadam: kod, kanal va raqamlarni olish
 @dp.message_handler(state=AdminStates.waiting_for_kino_data)
-async def ask_title_for_kino(message: types.Message, state: FSMContext):
-    parts = message.text.strip().split()
-    if len(parts) != 4:
-        await message.answer("❗ To‘liq formatda yuboring: `KOD @kanal REKLAMA_ID POST_SONI`")
-        return
+async def add_kino_handler(message: types.Message, state: FSMContext):
+    rows = message.text.strip().split("\n")
+    successful = 0
+    failed = 0
+    for row in rows:
+        parts = row.strip().split()
+        if len(parts) != 4:
+            failed += 1
+            continue
 
-    code, server_channel, reklama_id, post_count = parts
-    if not (code.isdigit() and reklama_id.isdigit() and post_count.isdigit()):
-        await message.answer("❗ Formatda raqam noto‘g‘ri.")
-        return
+        code, server_channel, reklama_id, post_count = parts
+        if not (code.isdigit() and reklama_id.isdigit() and post_count.isdigit()):
+            failed += 1
+            continue
 
-    # Ma'lumotlarni vaqtincha saqlaymiz
-    await state.update_data(code=code, server_channel=server_channel, reklama_id=int(reklama_id), post_count=int(post_count))
+        reklama_id = int(reklama_id)
+        post_count = int(post_count)
+        await add_kino_code(code, server_channel, reklama_id + 1, post_count)
 
-    await AdminStates.waiting_for_kino_title.set()
-    await message.answer("🎞 Endi anime nomini yuboring:")
-
-# 2-qadam: nomni olish, saqlash va kanalga yuborish
-@dp.message_handler(state=AdminStates.waiting_for_kino_title)
-async def save_kino_with_title(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    title = message.text.strip()
-
-    code = data["code"]
-    server_channel = data["server_channel"]
-    reklama_id = data["reklama_id"]
-    post_count = data["post_count"]
-
-    await add_kino_code(code, title, server_channel, reklama_id + 1, post_count)
-
-    download_btn = InlineKeyboardMarkup().add(
-        InlineKeyboardButton("📥 Yuklab olish", url=f"https://t.me/{BOT_USERNAME}?start={code}")
-    )
-
-    try:
-        await bot.copy_message(
-            chat_id=MAIN_CHANNEL,
-            from_chat_id=server_channel,
-            message_id=reklama_id,
-            reply_markup=download_btn
+        download_btn = InlineKeyboardMarkup().add(
+            InlineKeyboardButton("📥 Yuklab olish", url=f"https://t.me/{BOT_USERNAME}?start={code}")
         )
-        await message.answer(f"✅ {title} qo‘shildi va kanalga yuborildi!")
-    except Exception as e:
-        await message.answer(f"⚠️ {title} qo‘shildi, lekin kanalga yuborilmadi:\n{e}")
 
+        try:
+            await bot.copy_message(
+                 chat_id=MAIN_CHANNEL,
+                from_chat_id=server_channel,
+                message_id=reklama_id,
+                reply_markup=download_btn
+            )
+            successful += 1
+        except:
+            failed += 1
+
+    await message.answer(f"✅ Yangi kodlar qo‘shildi:\n\n✅ Muvaffaqiyatli: {successful}\n❌ Xatolik: {failed}")
     await state.finish()
-
 
 # === 📢 Habar yuborish
 @dp.message_handler(lambda m: m.text == "📢 Habar yuborish")
