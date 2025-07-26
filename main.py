@@ -4,7 +4,6 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils import executor
-from search import dp as search_dp  # yoki oddiy `import search` ham bo'ladi
 from dotenv import load_dotenv
 from keep_alive import keep_alive
 from loader import dp, bot, storage 
@@ -100,7 +99,6 @@ async def start_handler(message: types.Message):
         kb.add(KeyboardButton("✉️ Admin bilan bog‘lanish"))
         await message.answer("🎬 Botga xush kelibsiz!\nKod kiriting:", reply_markup=kb)
 
-from search import *
 
 # === ✉️ Admin bilan bog‘lanish ===
 @dp.message_handler(lambda m: m.text == "✉️ Admin bilan bog‘lanish")
