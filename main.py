@@ -41,7 +41,6 @@ class AdminStates(StatesGroup):
     waiting_for_delete_code = State()
     waiting_for_stat_code = State()
     waiting_for_broadcast_data = State()
-    waiting_for_admin_message = State()
 
 # === OBUNA TEKSHIRISH ===
 async def is_user_subscribed(user_id):
@@ -54,33 +53,6 @@ async def is_user_subscribed(user_id):
             print(f"❗ Obuna tekshirishda xatolik: {channel} -> {e}")
             return False
     return True
-
-@dp.message_handler(lambda msg: msg.text == "📩 Adminlarga habar yozish")
-async def to_admin_prompt(message: types.Message):
-    await message.answer("✉️ Adminlarga habar matnini yozing (yoki /cancel):")
-    await UserStates.waiting_for_admin_message.set()
-
-@dp.message_handler(state=UserStates.waiting_for_admin_message)
-async def forward_to_admins(message: types.Message, state: FSMContext):
-    if message.text == "/cancel":
-        await message.answer("❌ Bekor qilindi.")
-        await state.finish()
-        return
-
-    text = (
-        f"📨 <b>Yangi foydalanuvchi habari:</b>\n\n"
-        f"{message.text}\n\n"
-        f"👤 @{message.from_user.username or message.from_user.full_name} (ID: <code>{message.from_user.id}</code>)"
-    )
-
-    for admin_id in ADMINS:
-        try:
-            await bot.send_message(admin_id, text, parse_mode="HTML")
-        except Exception as e:
-            print(f"❌ Adminga habar yuborishda xato: {e}")
-
-    await message.answer("✅ Habaringiz adminlarga yuborildi.")
-    await state.finish()
 
 # === /start ===
 @dp.message_handler(commands=['start'])
@@ -108,7 +80,28 @@ async def start_handler(message: types.Message):
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
         kb.add("📩 Adminlarga habar yozish")
         await message.answer("🎬 Botga xush kelibsiz!\nKod kiriting:", reply_markup=kb)
+# === ✉️ Admin bilan bog‘lanish ===
+@dp.message_handler(lambda m: m.text == "✉️ Admin bilan bog‘lanish")
+async def contact_admin(message: types.Message):
+    await UserStates.waiting_for_admin_message.set()
+    await message.answer("✍️ Adminlarga yubormoqchi bo‘lgan xabaringizni yozing.\n\n❌ Bekor qilish uchun '❌ Bekor qilish' tugmasini bosing.")
 
+@dp.message_handler(state=UserStates.waiting_for_admin_message)
+async def forward_to_admins(message: types.Message, state: FSMContext):
+    await state.finish()
+    user = message.from_user
+    for admin_id in ADMINS:
+        try:
+            await bot.send_message(
+                admin_id,
+                f"📩 <b>Yangi xabar:</b>\n\n"
+                f"<b>👤 Foydalanuvchi:</b> {user.full_name} | <code>{user.id}</code>\n"
+                f"<b>💬 Xabar:</b> {message.text}",
+                parse_mode="HTML"
+            )
+        except Exception as e:
+            print(f"Adminga yuborishda xatolik: {e}")
+    await message.answer("✅ Xabaringiz yuborildi. Tez orada admin siz bilan bog‘lanadi.")
 
 # === Kod statistikasi
 @dp.message_handler(lambda m: m.text == "📈 Kod statistikasi")
