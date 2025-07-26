@@ -1,11 +1,11 @@
-# loader.py
+from dotenv import load_dotenv
+import os
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-import os
-from dotenv import load_dotenv
 
 load_dotenv()
 
-bot = Bot(token=os.getenv("API_TOKEN"))
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
