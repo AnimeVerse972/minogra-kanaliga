@@ -86,7 +86,7 @@ async def start_handler(message: types.Message):
         kb.add("➕ Anime qo‘shish")
         kb.add("📊 Statistika", "📈 Kod statistikasi")
         kb.add("❌ Kodni o‘chirish", "📄 Kodlar ro‘yxati")
-        kb.add("❌ Bekor qilish", "✏️ Kodni tahrirlash")
+        kb.add("✏️ Kodni tahrirlash")
         await message.answer("👮‍♂️ Admin panel:", reply_markup=kb)
     else:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -363,17 +363,6 @@ async def delete_code_handler(message: types.Message, state: FSMContext):
         await message.answer(f"✅ Kod {code} o‘chirildi.")
     else:
         await message.answer("❌ Kod topilmadi yoki o‘chirib bo‘lmadi.")
-
-# === Bekor qilish ===
-@dp.message_handler(lambda m: m.text == "❌ Bekor qilish", state='*')
-async def cancel_handler(message: types.Message, state: FSMContext):
-    current_state = await state.get_state()
-    if current_state is None:
-        await message.answer("🚫 Hozir hech qanday amal bajarilmayapti.")
-        return
-
-    await state.finish()
-    await message.answer("❌ Amal bekor qilindi.", reply_markup=admin_menu())
 
 # === START ===
 async def on_startup(dp):
