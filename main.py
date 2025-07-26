@@ -7,6 +7,7 @@ from aiogram.utils import executor
 from search import dp as search_dp  # yoki oddiy `import search` ham bo'ladi
 from dotenv import load_dotenv
 from keep_alive import keep_alive
+from loader import dp, bot, storage 
 from database import (
     init_db, add_user, get_user_count, add_kino_code, get_kino_by_code,
     get_all_codes, delete_kino_code, get_code_stat, increment_stat,
