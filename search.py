@@ -1,28 +1,30 @@
 from aiogram import types
+from aiogram.dispatcher import FSMContext
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.dispatcher.filters import Text
 from loader import dp
-from database import get_all_codes  # yoki alohida qidiruv funksiyasi yozamiz
-from asyncpg import Record
-from database import db_pool
+from database import search_kino_by_title, increment_stat
 
-@dp.message_handler(lambda m: len(m.text) >= 3)  # 3 ta harfdan kam bo'lmasin
+
+@dp.message_handler(lambda message: len(message.text) > 2)
 async def search_anime(message: types.Message):
-    query = message.text.strip().lower()
+    query = message.text.strip()
 
-    async with db_pool.acquire() as conn:
-        rows = await conn.fetch("""
-            SELECT code, title FROM kino_codes
-            WHERE title ILIKE '%' || $1 || '%'
-            LIMIT 10
-        """, query)
+    # Qidiruv
+    results = await search_kino_by_title(query)
 
-    if not rows:
-        await message.answer("🔍 Hech narsa topilmadi.")
+    if not results:
+        await message.answer("❌ Hech narsa topilmadi.")
         return
 
-    text = "🔍 Qidiruv natijalari:\n\n"
-    for row in rows:
-        code = row["code"]
-        title = row["title"]
-        text += f"🔹 {title} — `{code}`\n"
+    # Javoblar inline tugmalar bilan
+    keyboard = InlineKeyboardMarkup(row_width=1)
+    for item in results:
+        button = InlineKeyboardButton(
+            text=f"{item['title']} ({item['code']})",
+            url=f"https://t.me/{item['channel']}/{item['message_id']}"
+        )
+        keyboard.add(button)
+        await increment_stat(item['code'], "searched")
 
-    await message.answer(text)
+    await message.answer("🔍 Natijalar:", reply_markup=keyboard)
