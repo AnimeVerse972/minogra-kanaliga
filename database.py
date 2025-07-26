@@ -78,7 +78,7 @@ async def add_anime_post(code, title, channel, message_ids, post_count):
         """, code)
 
 # === Kod orqali anime postni olish ===
-async def get_anime_by_code(code):
+async def get_kino_by_code(code):
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow("""
             SELECT title, channel, message_ids, post_count FROM anime_posts WHERE code = $1
