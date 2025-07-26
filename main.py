@@ -310,11 +310,19 @@ async def kodlar(message: types.Message):
     if not kodlar:
         await message.answer("📂 Kodlar yo‘q.")
         return
+
     text = "📄 Kodlar:\n"
     for row in kodlar:
-        code, ch, msg_id, count = row["code"], row["channel"], row["message_id"], row["post_count"]
-        text += f"🔹 {code} → {ch} | {msg_id} ({count} post)\n"
-    await message.answer(text)
+        code = row["code"]
+        ch = row["channel"]
+        msg_id = row["message_id"]
+        count = row["post_count"]
+        title = row.get("title") or "Nomsiz"
+
+        text += f"🎬 *{title}*\n🔹 {code} → {ch} | {msg_id} ({count} post)\n\n"
+
+    await message.answer(text, parse_mode="Markdown")
+
 
 # === Statistika
 @dp.message_handler(lambda m: m.text == "📊 Statistika")
