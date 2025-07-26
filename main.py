@@ -105,7 +105,10 @@ async def start_handler(message: types.Message):
         kb.add("❌ Bekor qilish")
         await message.answer("👮‍♂️ Admin panel:", reply_markup=kb)
     else:
-        await message.answer("🎬 Botga xush kelibsiz!\nKod kiriting:")
+        kb = ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add("📩 Adminlarga habar yozish")
+        await message.answer("🎬 Botga xush kelibsiz!\nKod kiriting:", reply_markup=kb)
+
 
 # === Kod statistikasi
 @dp.message_handler(lambda m: m.text == "📈 Kod statistikasi")
