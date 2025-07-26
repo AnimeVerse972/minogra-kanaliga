@@ -8,22 +8,21 @@ from loader import dp
 from database import search_kino_by_title, increment_stat
 
 
-# ==== Holatlar klassi (FSM uchun) ====
 class SearchStates(StatesGroup):
     waiting_for_query = State()
 
 
-# ==== "🔍 Anime qidirish" tugmasi bosilganda ====
 @dp.message_handler(Text(equals="🔍 Anime qidirish"))
 async def ask_search_query(message: types.Message, state: FSMContext):
     await message.answer("🔎 Qaysi anime kerak? Nomini yozing:")
-    await state.set_state(SearchStates.waiting_for_query)
+    await SearchStates.waiting_for_query.set()
+    print("[FSM] Holat: waiting_for_query")
 
 
-# ==== Foydalanuvchi qidiruv matnini yozganda ====
 @dp.message_handler(state=SearchStates.waiting_for_query)
 async def handle_search_query(message: types.Message, state: FSMContext):
     query = message.text.strip()
+    print(f"[Qidiruv] Foydalanuvchi kiritdi: {query}")
 
     results = await search_kino_by_title(query)
 
