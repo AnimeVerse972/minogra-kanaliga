@@ -33,7 +33,7 @@ async def make_subscribe_markup(code):
     keyboard.add(InlineKeyboardButton("✅ Tekshirish", callback_data=f"check_sub:{code}"))
     return keyboard
 
-ADMINS = [6486825926,7483732504,5959511392]
+ADMINS = [6486825926,8017776953]
 
 # === HOLATLAR ===
 class AdminStates(StatesGroup):
@@ -41,6 +41,9 @@ class AdminStates(StatesGroup):
     waiting_for_delete_code = State()
     waiting_for_stat_code = State()
     waiting_for_broadcast_data = State()
+
+class UserStates(StatesGroup):
+    waiting_for_admin_message = State()
 
 # === OBUNA TEKSHIRISH ===
 async def is_user_subscribed(user_id):
@@ -78,8 +81,9 @@ async def start_handler(message: types.Message):
         await message.answer("👮‍♂️ Admin panel:", reply_markup=kb)
     else:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add("📩 Adminlarga habar yozish")
+        kb.add(KeyboardButton("✉️ Admin bilan bog‘lanish"))
         await message.answer("🎬 Botga xush kelibsiz!\nKod kiriting:", reply_markup=kb)
+
 # === ✉️ Admin bilan bog‘lanish ===
 @dp.message_handler(lambda m: m.text == "✉️ Admin bilan bog‘lanish")
 async def contact_admin(message: types.Message):
